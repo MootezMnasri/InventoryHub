@@ -1,0 +1,83 @@
+﻿@inject IProductService ProductService
+@page "/fetchproducts"
+@using ClientApp.Services
+
+<h3>Product List</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @errorMessage
+    </div>
+}
+else if (isLoading)
+{
+    <div class="alert alert-info" role="alert">
+        Loading products...
+    </div>
+}
+else if (products?.Length > 0)
+{
+    <ul>
+        @foreach (var product in products)
+        {
+            <li>@product.Name - $@product.Price (@product.Category?.Name)</li>
+        }
+    </ul>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        No products available.
+    </div>
+}
+
+@code {
+    private Product[]? products;
+    private string errorMessage = string.Empty;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            products = await ProductService.GetProductsAsync();
+
+            if (products == null)
+            {
+                errorMessage = "Invalid response from server.";
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded {products.Length} products.");
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Failed to connect to the server: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"HttpRequestException: {ex}");
+        }
+        catch (System.Threading.Tasks.TaskCanceledException)
+        {
+            errorMessage = "Request timed out. Please try again later.";
+            System.Diagnostics.Debug.WriteLine("Request timeout occurred.");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading products.";
+            System.Diagnostics.Debug.WriteLine($"Unexpected exception: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
